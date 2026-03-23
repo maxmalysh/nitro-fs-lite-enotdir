@@ -1,26 +1,23 @@
 import { eventHandler } from "h3"
 import { useStorage } from "nitropack/runtime"
 
+// Demonstrates that it's not possible to cache both "/foo" and "/foo/bar"
+// when using fs-lite as the storage driver.
+
 export default eventHandler(async () => {
-  const storage = useStorage("cache")
+  const cache = useStorage("cache")
 
-  // Step 1: Store a value with key "items:123"
-  //         fs-lite driver creates FILE at .cache/nitro/items/123
-  await storage.setItem("items:123", { name: "Item 123" })
+  // Cache route "/foo" — fs-lite creates FILE at .cache/nitro/foo
+  await cache.setItem("/foo", { page: "/foo", cached: true })
 
-  // Step 2: Store a value with key "items:123:details"
-  //         fs-lite driver tries to create .cache/nitro/items/123/details
-  //         but "123" is already a FILE, not a directory → ENOTDIR
+  // Cache route "/foo/bar" — fs-lite needs .cache/nitro/foo/ to be a DIRECTORY
+  // but it's already a FILE → ENOTDIR
   try {
-    await storage.setItem("items:123:details", { name: "Item 123 details" })
+    await cache.setItem("/foo/bar", { page: "/foo/bar", cached: true })
   } catch (err: any) {
     return {
       error: err.message,
       code: err.code,
-      explanation:
-        "fs-lite maps ':' to '/' in file paths. " +
-        "Key 'items:123' creates a file at items/123, " +
-        "then key 'items:123:details' needs items/123/ to be a directory — ENOTDIR.",
     }
   }
 

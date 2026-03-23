@@ -1,6 +1,15 @@
-# Reproduction: fs-lite ENOTDIR with hierarchical keys
+# Reproduction: cannot cache both `/foo` and `/foo/bar` with fs-lite
 
-Demonstrates that using `fs-lite` storage driver with hierarchical keys causes `ENOTDIR` when a key is both a value and a prefix of another key.
+It's not possible to cache both `/foo` and `/foo/bar` when using `fs` or `fs-lite` as the storage driver:
+
+```ts
+// nitro.config.ts
+export default defineNitroConfig({
+  storage: {
+    cache: { driver: "fs-lite", base: ".cache/nitro" },
+  },
+})
+```
 
 ## Steps to reproduce
 
@@ -10,19 +19,17 @@ npx nitro dev
 # Open http://localhost:3000
 ```
 
-The index route stores two keys:
-1. `items:123` → fs-lite creates **file** at `.cache/nitro/items/123`
-2. `items:123:details` → fs-lite tries to create `.cache/nitro/items/123/details`, but `123` is already a file → **ENOTDIR**
+The index route caches two keys — `/foo` and `/foo/bar`. The second one fails with `ENOTDIR` because `fs-lite` already created `/foo` as a file, not a directory.
 
 ## Expected
 
-Both keys should be stored successfully.
+Both keys stored successfully.
 
 ## Actual
 
 ```json
 {
-  "error": "ENOTDIR: not a directory, open '.../.cache/nitro/items/123/details'",
+  "error": "ENOTDIR: not a directory, open '.../.cache/nitro/foo/bar'",
   "code": "ENOTDIR"
 }
 ```
