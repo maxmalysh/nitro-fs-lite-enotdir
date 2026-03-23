@@ -1,25 +1,13 @@
 import { eventHandler } from "h3"
-import { useStorage } from "nitropack/runtime"
 
-// Demonstrates that it's not possible to cache both "/foo" and "/foo/bar"
-// when using fs-lite as the storage driver.
-
-export default eventHandler(async () => {
-  const cache = useStorage("cache")
-
-  // Cache route "/foo" — fs-lite creates FILE at .cache/nitro/foo
-  await cache.setItem("/foo", { page: "/foo", cached: true })
-
-  // Cache route "/foo/bar" — fs-lite needs .cache/nitro/foo/ to be a DIRECTORY
-  // but it's already a FILE → ENOTDIR
-  try {
-    await cache.setItem("/foo/bar", { page: "/foo/bar", cached: true })
-  } catch (err: any) {
-    return {
-      error: err.message,
-      code: err.code,
-    }
-  }
-
-  return { ok: true }
+export default eventHandler(() => {
+  return `
+    <meta charset="utf-8">
+    <h1>fs-lite ENOTDIR reproduction</h1>
+    <p>Visit these routes <b>in order</b>:</p>
+    <ol>
+      <li><a href="/foo">/foo</a> — caches payload, creates <b>file</b> at .cache/foo</li>
+      <li><a href="/foo/bar">/foo/bar</a> — tries to cache payload, needs .cache/foo to be a <b>directory</b> → ENOTDIR</li>
+    </ol>
+  `
 })

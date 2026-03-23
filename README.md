@@ -3,12 +3,10 @@
 It's not possible to cache both `/foo` and `/foo/bar` when using `fs` or `fs-lite` as the storage driver:
 
 ```ts
-// nitro.config.ts
-export default defineNitroConfig({
-  storage: {
-    cache: { driver: "fs-lite", base: ".cache/nitro" },
-  },
-})
+// nitro.config.ts (or nitro section of nuxt.config.ts)
+storage: {
+  cache: { driver: "fs-lite", base: ".cache/nitro" },
+}
 ```
 
 ## Steps to reproduce
@@ -16,20 +14,20 @@ export default defineNitroConfig({
 ```bash
 npm install
 npx nitro dev
-# Open http://localhost:3000
 ```
 
-The index route caches two keys — `/foo` and `/foo/bar`. The second one fails with `ENOTDIR` because `fs-lite` already created `/foo` as a file, not a directory.
+1. Open http://localhost:3000 — index page with links
+2. Click `/foo` — payload is cached, creates **file** at `.cache/nitro/foo`
+3. Click `/foo/bar` — tries to cache payload, needs `.cache/nitro/foo` to be a **directory** → **ENOTDIR**
 
 ## Expected
 
-Both keys stored successfully.
+Both routes cache their payloads successfully.
 
 ## Actual
 
-```json
-{
-  "error": "ENOTDIR: not a directory, open '.../.cache/nitro/foo/bar'",
-  "code": "ENOTDIR"
-}
+Visiting `/foo/bar` after `/foo` crashes with:
+
+```
+ENOTDIR: not a directory, open '.cache/nitro/foo/bar'
 ```
